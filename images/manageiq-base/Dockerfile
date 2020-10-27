@@ -40,16 +40,17 @@ LABEL name="manageiq-base" \
       io.openshift.tags="ManageIQ,miq,manageiq"
 
 COPY rpms/* /tmp/rpms/
+COPY s390/*.rpm /tmp/rpms/
+RUN if [ ${ARCH} = "s390x" ] ; then dnf -y install /tmp/rpms/python3-ovirt-engine-sdk4-4.4.4-1.el8.s390x.rpm; fi 
 COPY container-assets/create_local_yum_repo.sh /
 
 RUN curl -L https://releases.ansible.com/ansible-runner/ansible-runner.el8.repo > /etc/yum.repos.d/ansible-runner.repo
 
-RUN dnf -y --disableplugin=subscription-manager install \
-      http://mirror.centos.org/centos/8.2.2004/BaseOS/${ARCH}/os/Packages/centos-repos-8.2-2.2004.0.1.el8.${ARCH}.rpm \
-      http://mirror.centos.org/centos/8.2.2004/BaseOS/${ARCH}/os/Packages/centos-gpg-keys-8.2-2.2004.0.1.el8.noarch.rpm \
-      https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
-      https://rpm.manageiq.org/release/11-kasparov/el8/noarch/manageiq-release-11.0-1.el8.noarch.rpm \
-      https://resources.ovirt.org/pub/yum-repo/ovirt-release44.rpm && \
+RUN if [ ${ARCH} != "s390x" ] ; then dnf -y --disableplugin=subscription-manager install http://mirror.centos.org/centos/8.2.2004/BaseOS/${ARCH}/os/Packages/centos-repos-8.2-2.2004.0.1.el8.${ARCH}.rpm \
+                                                    http://mirror.centos.org/centos/8.2.2004/BaseOS/${ARCH}/os/Packages/centos-gpg-keys-8.2-2.2004.0.1.el8.noarch.rpm; fi && \
+    dnf -y --disableplugin=subscription-manager install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm  \
+                                                        https://rpm.manageiq.org/release/11-kasparov/el8/noarch/manageiq-release-11.0-1.el8.noarch.rpm \
+                                                        https://resources.ovirt.org/pub/yum-repo/ovirt-release44.rpm && \
     dnf -y --disableplugin=subscription-manager module enable nodejs:12 && \
     dnf -y --disableplugin=subscription-manager module enable ruby:2.6 && \
     if [[ "$RELEASE_BUILD" != "true" ]]; then dnf config-manager --enable manageiq-11-kasparov-nightly; fi && \
@@ -77,3 +78,4 @@ RUN curl -L -o /usr/bin/dumb-init https://github.com/Yelp/dumb-init/releases/dow
 RUN source /etc/default/evm && /usr/bin/generate_rpm_manifest.sh
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--single-child", "--"]
+
